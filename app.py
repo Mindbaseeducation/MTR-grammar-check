@@ -8,39 +8,35 @@ import re
 openai.api_key = st.secrets["openai"]["api_key"]
 
 st.set_page_config(page_title="Grammar Reviewer", layout="wide")
-st.title("📝 Notes Grammar & Content Review")
+st.title("📝 Student Notes - Grammar & Privacy Review")
 
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file, keep_default_na=False)
 
-    def generate_prompt(row):
+    def check_name_in_notes(student_name, notes):
+        first_name = student_name.strip().split()[0]
+        pattern = re.compile(rf"\b{re.escape(first_name)}\b", re.IGNORECASE)
+        return bool(pattern.search(notes)), first_name
+
+    def generate_prompt(notes):
         return f"""
-You are a grammar and content checker reviewing the “Notes on student” field from a monthly academic report.
+You are a grammar and safety reviewer.
 
---- Notes on student ---
-{row['Student notes']}
+--- Notes to review ---
+{notes}
 
-Your task:
+Please check the following:
 
-🔍 Carefully check the grammar, spelling, and content of the notes.
+1. If there are grammar or spelling issues, flag them briefly.
+2. If the notes contain any inappropriate or sensitive terms (e.g., sex, drugs, alcohol, behaviour, behavioral, aggression, aggressive), flag that.
+3. If everything looks clean, say **No**.
 
-Return the following flags:
-
-1. ❌ If the word **"student"** is NOT used (e.g., if a name is used instead to refer the student), flag it.
-2. ❌ If there are grammar or spelling issues, mention them briefly.
-3. ❌ If the notes contain any sensitive keywords: **sex**, **drugs**, **alcohol**, **behaviour**, **behavioural**, **aggression**, **aggressive**, flag them.
-4. ✅ If none of the above issues are found, return **No**.
-
----
-
-Return your response in the format:
-
-Grammar Flag: [Yes: <short explanation> / No]
+Return the result in this format only:
+Grammar Flag: [Yes: <short reason> / No]
 """
 
-    # Extract Grammar Flag from response
     def extract_field(lines, label):
         for line in lines:
             match = re.match(rf".*{label}\s*:\s*(.*)", line.strip(), re.IGNORECASE)
@@ -49,35 +45,40 @@ Grammar Flag: [Yes: <short explanation> / No]
         return "Error"
 
     def review_grammar(row):
-        prompt = generate_prompt(row)
+        notes = row["Student notes"]
+        student_name = row["Student Name"]
+        name_used, first_name = check_name_in_notes(student_name, notes)
+
+        # If name is found in notes, we already flag it
+        if name_used:
+            return f"Yes: Student's first name '{first_name}' used instead of 'student'"
+
+        # Else, ask the AI for grammar/sensitivity check
+        prompt = generate_prompt(notes)
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a careful grammar reviewer."},
+                    {"role": "system", "content": "You are a strict grammar and content reviewer."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0
             )
             content = response['choices'][0]['message']['content']
             lines = content.strip().split("\n")
-
             grammar_flag = extract_field(lines, "Grammar Flag")
-            return grammar_flag if grammar_flag != "No" else "No", "" if grammar_flag == "No" else grammar_flag
-
+            return grammar_flag
         except Exception as e:
-            return "Error", str(e)
+            return f"Error: {str(e)}"
 
     if st.button("🔍 Perform Grammar Review"):
-        with st.spinner("Reviewing notes for grammar issues..."):
-            grammar_flags, grammar_remarks = [], []
+        with st.spinner("Reviewing notes for grammar and name usage..."):
+            grammar_flags = []
             for _, row in df.iterrows():
-                grammar_flag, remark = review_grammar(row)
-                grammar_flags.append(grammar_flag)
-                grammar_remarks.append(remark)
+                flag = review_grammar(row)
+                grammar_flags.append(flag)
 
             df["Grammar Flag"] = grammar_flags
-            df["Grammar Remark"] = grammar_remarks
 
             output = BytesIO()
             df.to_excel(output, index=False, engine='openpyxl')
