@@ -28,7 +28,7 @@ Your task:
 
 Return the following flags:
 
-1. ❌ If the word **"student"** is NOT used (e.g., if a name is used instead), flag it.
+1. ❌ If the word **"student"** is NOT used (e.g., if a name is used instead to refer the student), flag it.
 2. ❌ If there are grammar or spelling issues, mention them briefly.
 3. ❌ If the notes contain any sensitive keywords: **sex**, **drugs**, **alcohol**, **behaviour**, **behavioural**, **aggression**, **aggressive**, flag them.
 4. ✅ If none of the above issues are found, return **No**.
