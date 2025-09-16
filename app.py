@@ -38,7 +38,7 @@ if uploaded_file:
             df["Sensitive Word Flag"] = df["Student notes"].apply(detect_sensitive_words)
 
             # Student name check
-            df["Correct Student Name Not Mentioned"] = df.apply(check_student_name, axis=1)
+            df["Incorrect Student Name Flag"] = df.apply(check_student_name, axis=1)
 
             # Save results
             output = BytesIO()
@@ -54,3 +54,4 @@ if uploaded_file:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
+
