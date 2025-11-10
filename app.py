@@ -60,14 +60,16 @@ if uploaded_file:
 
     if st.button("🚨 Run Checks"):
         with st.spinner("Scanning notes..."):
+
+            # Contact details check
+            df["Contact Details Check"] = df.apply(contact_details_check, axis=1)
+            
             # Sensitive words check
             df["Sensitive Word Flag"] = df["Student notes"].apply(detect_sensitive_words)
 
             # Student name check
             df["Incorrect Student Name Flag"] = df.apply(check_student_name, axis=1)
-
-            # Contact details check
-            df["Contact Details Check"] = df.apply(contact_details_check, axis=1)
+            
 
             # Save results
             output = BytesIO()
