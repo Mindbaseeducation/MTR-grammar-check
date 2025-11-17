@@ -4,7 +4,7 @@ from io import BytesIO
 import re
 
 st.set_page_config(page_title="Sensitive Word Checker", layout="wide")
-st.title("🔍 Grammar (Sensitive words, Name & Contact Details Check)")
+st.title("🔍 Grammar (Sensitive words and Name Check)")
 
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
@@ -31,38 +31,8 @@ if uploaded_file:
         else:
             return "Yes"
 
-    # Function to validate contact numbers
-    def contact_details_check(row):
-        country = str(row.get("Country", "")).strip().lower()
-        primary = str(row.get("Primary Mobile Number", "")).strip()
-        whatsapp = str(row.get("Whatsapp Mobile Number", "")).strip()
-        abroad = str(row.get("Abroad Mobile Number", "")).strip()
-
-        issues = []
-
-        # Check Primary & Whatsapp numbers for UAE (+971 or 971)
-        for label, number in [("Primary", primary), ("Whatsapp", whatsapp)]:
-            if number and not (number.startswith("+971") or number.startswith("971")):
-                issues.append(f"{label} not UAE")
-
-        # Check Abroad number based on Country
-        if country in ["usa", "canada"]:
-            if abroad and not (abroad.startswith("+1") or abroad.startswith("1")):
-                issues.append("Abroad num not US/Canada format")
-        elif country == "australia":
-            if abroad and not (abroad.startswith("+61") or abroad.startswith("61")):
-                issues.append("Abroad num not Australia format")
-        elif country == "new zealand":
-            if abroad and not (abroad.startswith("+64") or abroad.startswith("64")):
-                issues.append("Abroad num not NZ format")
-
-        return "✅ Correct" if not issues else f"❌ {', '.join(issues)}"
-
     if st.button("🚨 Run Checks"):
         with st.spinner("Scanning notes..."):
-
-            # Contact details check
-            df["Contact Details Check"] = df.apply(contact_details_check, axis=1)
             
             # Sensitive words check
             df["Sensitive Word Flag"] = df["Student notes"].apply(detect_sensitive_words)
@@ -81,6 +51,6 @@ if uploaded_file:
             st.download_button(
                 label="📥 Download Results",
                 data=output,
-                file_name="Sensitive_Words_Name_Contact_Check.xlsx",
+                file_name="Sensitive Words & Name Check.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
